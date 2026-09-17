@@ -11,6 +11,7 @@
     <ItemGroup>
       <Folder Include="Controls\" />
       <Folder Include="Core\" />
+      <Folder Include="TestFiles\" />
       <Folder Include="ViewModels\" />
     </ItemGroup>
 
