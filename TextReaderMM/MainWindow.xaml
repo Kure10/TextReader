@@ -28,7 +28,7 @@
         </StatusBar>
 
         <!-- TEMPORARY: replaced by the custom virtualized TextView in step 3 -->
-        <ListBox ItemsSource="{Binding VisibleLines}"
+        <ListBox ItemsSource="{Binding Lines}"
                  FontFamily="Consolas"
                  VirtualizingPanel.IsVirtualizing="True"
                  VirtualizingPanel.VirtualizationMode="Recycling" />

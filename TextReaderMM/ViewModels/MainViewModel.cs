@@ -9,7 +9,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IDialogService _dialogs;
 
     private ITextDocument? _document;
-    private IReadOnlyList<string> _visibleLines = [];
+    private VirtualLineList? _lines;
     private bool _isBusy;
     private string _statusText = "No file loaded";
 
@@ -33,15 +33,13 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// TEMPORARY: lines bound to a ListBox until the custom virtualized TextView exists.
-    /// </summary>
-    public IReadOnlyList<string> VisibleLines
+    /// <summary>TEMPORARY: lines shown in the placeholder ListBox.</summary>
+    public VirtualLineList? Lines
     {
-        get => _visibleLines;
-        private set => SetField(ref _visibleLines, value);
+        get => _lines;
+        private set => SetField(ref _lines, value);
     }
-    
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -58,26 +56,24 @@ public sealed class MainViewModel : ObservableObject
         ? "TextReaderMM"
         : $"{Path.GetFileName(Document.FilePath)} - TextReaderMM";
 
-    private async void OpenFile()
+    private void OpenFile()
     {
-        string? path = _dialogs.ShowOpenFileDialog();
+        var path = _dialogs.ShowOpenFileDialog();
         if (path is null)
             return;
 
         IsBusy = true;
-        StatusText = $"Loading {Path.GetFileName(path)}...";
 
         try
         {
-            var newDocument = await InMemoryTextDocument.LoadAsync(path);
+            // Progress<T> marshals the callback back to the UI thread for us.
+            var progress = new Progress<IndexingProgress>(OnIndexingProgress);
+            var newDocument = IndexedTextDocument.Open(path, progress);
 
             Document?.Dispose();
             Document = newDocument;
-            VisibleLines = Enumerable.Range(0, (int)newDocument.LineCount)
-                .Select(i => newDocument.GetLine(i))
-                .ToList();
-
-            StatusText = $"{FormatSize(newDocument.FileSize)}  |  {newDocument.LineCount:N0} lines";
+            Lines = null;
+            StatusText = $"{FormatSize(newDocument.FileSize)}  |  {newDocument.Encoding}  |  indexing...";
         }
         catch (Exception ex)
         {
@@ -90,16 +86,31 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    private void OnIndexingProgress(IndexingProgress progress)
+    {
+        if (Document is null)
+            return;
+
+        // Rebuilding the list is what makes newly indexed lines visible in the ListBox.
+        Lines = new VirtualLineList(Document, progress.LineCount);
+
+        StatusText = progress.IsComplete
+            ? $"{FormatSize(Document.FileSize)}  |  {Document.Encoding}  |  {progress.LineCount:N0} lines"
+            : $"{FormatSize(Document.FileSize)}  |  {Document.Encoding}  |  {progress.LineCount:N0} lines  |  indexing {progress.Ratio:P0}";
+    }
+
     private static string FormatSize(long bytes)
     {
         string[] units = ["B", "KB", "MB", "GB", "TB"];
         double size = bytes;
         var unit = 0;
+
         while (size >= 1024 && unit < units.Length - 1)
         {
             size /= 1024;
             unit++;
         }
+
         return $"{size:0.##} {units[unit]}";
     }
 }
