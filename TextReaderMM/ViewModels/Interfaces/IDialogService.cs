@@ -13,5 +13,8 @@ public interface IDialogService
     /// <summary>Returns how many lines to generate, or null when cancelled.</summary>
     long? ShowGenerateTextDialog();
 
+    /// <summary>Returns the zero-based line to jump to, or null when cancelled.</summary>
+    long? ShowGoToLineDialog(long lineCount, long currentLine);
+
     void ShowError(string message);
 }

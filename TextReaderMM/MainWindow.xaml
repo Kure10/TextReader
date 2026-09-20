@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:commands="clr-namespace:TextReaderMM.Commands"
         xmlns:controls="clr-namespace:TextReaderMM.Controls"
         xmlns:vm="clr-namespace:TextReaderMM.ViewModels"
         mc:Ignorable="d"
@@ -13,31 +14,21 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     </Window.Resources>
 
-    <Window.CommandBindings>
-        <CommandBinding Command="Find" Executed="OnFindExecuted" />
-    </Window.CommandBindings>
-
-    <Window.InputBindings>
-        <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenFileCommand}" />
-        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveAsCommand}" />
-        <KeyBinding Key="F" Modifiers="Control" Command="Find" />
-        <KeyBinding Key="F3" Command="{Binding Search.FindNextCommand}" />
-        <KeyBinding Key="F3" Modifiers="Shift" Command="{Binding Search.FindPreviousCommand}" />
-    </Window.InputBindings>
-
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_Open..." InputGestureText="Ctrl+O" Command="{Binding OpenFileCommand}" />
-                <MenuItem Header="Open _URL..." Command="{Binding OpenUrlCommand}" />
-                <MenuItem Header="_Generate random text..." Command="{Binding GenerateRandomTextCommand}" />
+                <MenuItem Header="_Open..." Command="{x:Static commands:AppCommands.OpenFile}" />
+                <MenuItem Header="Open _URL..." Command="{x:Static commands:AppCommands.OpenUrl}" />
+                <MenuItem Header="_Generate random text..." Command="{x:Static commands:AppCommands.GenerateRandomText}" />
                 <Separator />
-                <MenuItem Header="_Save as..." InputGestureText="Ctrl+S" Command="{Binding SaveAsCommand}" />
+                <MenuItem Header="_Save as..." Command="{x:Static commands:AppCommands.SaveAs}" />
             </MenuItem>
             <MenuItem Header="_Search">
-                <MenuItem Header="_Find..." InputGestureText="Ctrl+F" Command="Find" />
-                <MenuItem Header="Find _next" InputGestureText="F3" Command="{Binding Search.FindNextCommand}" />
-                <MenuItem Header="Find _previous" InputGestureText="Shift+F3" Command="{Binding Search.FindPreviousCommand}" />
+                <MenuItem Header="_Find..." Command="{x:Static commands:AppCommands.Find}" />
+                <MenuItem Header="Find _next" Command="{x:Static commands:AppCommands.FindNext}" />
+                <MenuItem Header="Find _previous" Command="{x:Static commands:AppCommands.FindPrevious}" />
+                <Separator />
+                <MenuItem Header="_Go to line..." Command="{x:Static commands:AppCommands.GoToLine}" />
             </MenuItem>
         </Menu>
 
@@ -63,12 +54,12 @@
                 <Button Content="Previous"
                         Margin="6,0,0,0"
                         Padding="10,2"
-                        Command="{Binding Search.FindPreviousCommand}" />
+                        Command="{x:Static commands:AppCommands.FindPrevious}" />
 
                 <Button Content="Next"
                         Margin="6,0,0,0"
                         Padding="10,2"
-                        Command="{Binding Search.FindNextCommand}" />
+                        Command="{x:Static commands:AppCommands.FindNext}" />
 
                 <CheckBox Content="Match case"
                           Margin="12,0,0,0"

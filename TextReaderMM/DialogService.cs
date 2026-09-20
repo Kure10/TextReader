@@ -33,6 +33,12 @@ public sealed class DialogService(Window owner) : IDialogService
         return window.ShowDialog() == true ? window.LineCount : null;
     }
 
+    public long? ShowGoToLineDialog(long lineCount, long currentLine)
+    {
+        var window = new GoToLineWindow(lineCount, currentLine) { Owner = owner };
+        return window.ShowDialog() == true ? window.LineIndex : null;
+    }
+
     public void ShowError(string message)
         => MessageBox.Show(owner, message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 }

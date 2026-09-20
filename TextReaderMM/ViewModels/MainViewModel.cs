@@ -30,12 +30,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OpenUrlCommand = new RelayCommand(OpenUrl, () => !IsBusy);
         GenerateRandomTextCommand = new RelayCommand(GenerateRandomText, () => !IsBusy);
         SaveAsCommand = new RelayCommand(SaveAs, () => !IsBusy && Document is not null);
+        GoToLineCommand = new RelayCommand(GoToLine, () => !IsBusy && DisplayDocument is not null);
     }
 
     public ICommand OpenFileCommand { get; }
     public ICommand OpenUrlCommand { get; }
     public ICommand GenerateRandomTextCommand { get; }
     public ICommand SaveAsCommand { get; }
+    public ICommand GoToLineCommand { get; }
+
+    /// <summary>Asks the view to scroll somewhere; the view owns the scrolling itself.</summary>
+    public event EventHandler<long>? ScrollToLineRequested;
 
     /// <summary>Everything around the search bar lives in its own view model.</summary>
     public SearchViewModel Search { get; } = new();
@@ -227,6 +232,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _dialogs.ShowError($"Failed to open file:\n{ex.Message}");
             StatusText = "Load failed";
         }
+    }
+
+    private void GoToLine()
+    {
+        if (DisplayDocument is null)
+            return;
+
+        var line = _dialogs.ShowGoToLineDialog(DisplayLineCount, Search.FirstVisibleLine);
+        if (line is null)
+            return;
+
+        ScrollToLineRequested?.Invoke(this, line.Value);
     }
 
     /// <summary>

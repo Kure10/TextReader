@@ -86,6 +86,13 @@ public partial class TextViewer : UserControl
     /// <summary>Hands the keyboard back to the text, e.g. after the search bar is closed.</summary>
     public void FocusText() => View.Focus();
 
+    /// <summary>Glides to the given line and puts the keyboard back into the text.</summary>
+    public void ScrollToLine(long line)
+    {
+        View.AnimateTo(line);
+        View.Focus();
+    }
+
     /// <summary>After a file is opened the focus sits in the menu, so it is handed back.</summary>
     private static void OnDocumentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         => ((TextViewer)d).View.Focus();
