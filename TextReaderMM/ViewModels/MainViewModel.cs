@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Input;
 using TextReaderMM.Core;
 using TextReaderMM.Core.Interfaces;
+using TextReaderMM.Diagnostics;
 using TextReaderMM.ViewModels.Interfaces;
 
 namespace TextReaderMM.ViewModels;
@@ -133,6 +134,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            Log.Error($"Download of {url} failed", ex);
             _dialogs.ShowError($"Download failed:\n{ex.Message}");
             StatusText = "Download failed";
         }
@@ -160,6 +162,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            Log.Error("Generating random text failed", ex);
             _dialogs.ShowError($"Generating failed:\n{ex.Message}");
             StatusText = "Generating failed";
         }
@@ -194,6 +197,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            Log.Error($"Saving to {target} failed", ex);
             _dialogs.ShowError($"Saving failed:\n{ex.Message}");
             StatusText = "Saving failed";
         }
@@ -229,6 +233,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            Log.Error($"Failed to open {path}", ex);
             _dialogs.ShowError($"Failed to open file:\n{ex.Message}");
             StatusText = "Load failed";
         }

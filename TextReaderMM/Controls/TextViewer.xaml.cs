@@ -128,12 +128,13 @@ public partial class TextViewer : UserControl
             VerticalScrollBar.Value = View.VerticalScrollPosition;
 
             // The document width is unknown, so the widest line currently drawn is used.
-            var maxWidth = Math.Max(0, View.WidestVisibleLineWidth - View.ActualWidth);
+            var textWidth = Math.Max(0, View.ActualWidth - View.GutterWidth);
+            var maxWidth = Math.Max(0, View.WidestVisibleLineWidth - textWidth);
 
-            HorizontalScrollBar.ViewportSize = View.ActualWidth;
+            HorizontalScrollBar.ViewportSize = textWidth;
             HorizontalScrollBar.Maximum = maxWidth;
             HorizontalScrollBar.SmallChange = 16;
-            HorizontalScrollBar.LargeChange = Math.Max(16, View.ActualWidth - 32);
+            HorizontalScrollBar.LargeChange = Math.Max(16, textWidth - 32);
             HorizontalScrollBar.Value = Math.Min(View.HorizontalOffset, maxWidth);
         }
         finally

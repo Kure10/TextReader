@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using TextReaderMM.Core;
 using TextReaderMM.Core.Interfaces;
+using TextReaderMM.Diagnostics;
 
 namespace TextReaderMM.ViewModels;
 
@@ -127,6 +128,9 @@ public sealed class SearchViewModel : ObservableObject
 
             CurrentMatch = match;
             ResultText = match is null ? "not found" : $"line {match.Value.LineIndex + 1:N0}";
+
+            Log.Info($"Search \"{term}\" {(forward ? "forward" : "backward")} from line {startLine}: " +
+                     (match is null ? "no match" : $"line {match.Value.LineIndex + 1}, column {match.Value.ColumnIndex}"));
         }
         catch (OperationCanceledException)
         {

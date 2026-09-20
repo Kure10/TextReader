@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using TextReaderMM.Core;
 using TextReaderMM.Core.Interfaces;
+using TextReaderMM.Diagnostics;
 
 namespace TextReaderMM.Controls;
 
@@ -21,6 +22,18 @@ public sealed class TextView : FrameworkElement
 
     /// <summary>Higher value means a shorter, snappier glide.</summary>
     private const double AnimationSpeed = 14;
+
+    /// <summary>Padding on both sides of the line numbers.</summary>
+    private const double GutterPadding = 10;
+
+    /// <summary>How close to the separator the mouse has to be to start dragging it.</summary>
+    private const double GutterGripWidth = 4;
+
+    /// <summary>The gutter never gets narrower than this, so the separator stays grabbable.</summary>
+    private const double MinGutterWidth = 30;
+
+    /// <summary>Upper bound for the gutter; wider than this it only steals space from the text.</summary>
+    private const double MaxGutterWidth = 110;
 
     public static readonly DependencyProperty DocumentProperty = DependencyProperty.Register(
         nameof(Document), typeof(ITextDocument), typeof(TextView),
@@ -50,6 +63,10 @@ public sealed class TextView : FrameworkElement
         nameof(CurrentMatch), typeof(SearchMatch?), typeof(TextView),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnCurrentMatchChanged));
 
+    public static readonly DependencyProperty ShowLineNumbersProperty = DependencyProperty.Register(
+        nameof(ShowLineNumbers), typeof(bool), typeof(TextView),
+        new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender));
+
     public static readonly DependencyProperty FontFamilyProperty = DependencyProperty.Register(
         nameof(FontFamily), typeof(FontFamily), typeof(TextView),
         new FrameworkPropertyMetadata(new FontFamily("Consolas"), FrameworkPropertyMetadataOptions.AffectsRender, OnFontChanged));
@@ -65,6 +82,10 @@ public sealed class TextView : FrameworkElement
     public static readonly DependencyProperty BackgroundProperty = DependencyProperty.Register(
         nameof(Background), typeof(Brush), typeof(TextView),
         new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    private static readonly Brush GutterBackground = CreateFrozenBrush(Color.FromRgb(247, 247, 247));
+    private static readonly Brush GutterForeground = CreateFrozenBrush(Color.FromRgb(150, 150, 150));
+    private static readonly Pen GutterSeparator = CreateFrozenPen(Color.FromRgb(210, 210, 210));
 
     private static readonly Brush MatchBrush = CreateFrozenBrush(Color.FromRgb(255, 233, 150));
     private static readonly Brush CurrentMatchBrush = CreateFrozenBrush(Color.FromRgb(255, 165, 60));
@@ -82,6 +103,10 @@ public sealed class TextView : FrameworkElement
     private double _targetPosition;
     private bool _isAnimating;
     private TimeSpan _lastFrameTime;
+
+    // Line number gutter. Null width means "as wide as the largest line number needs".
+    private double? _manualGutterWidth;
+    private bool _isDraggingGutter;
 
     public TextView()
     {
@@ -152,7 +177,38 @@ public sealed class TextView : FrameworkElement
         set => SetValue(BackgroundProperty, value);
     }
 
+    public bool ShowLineNumbers
+    {
+        get => (bool)GetValue(ShowLineNumbersProperty);
+        set => SetValue(ShowLineNumbersProperty, value);
+    }
+
     public double LineHeight => _lineHeight;
+
+    /// <summary>
+    /// Width of the line number column. It fits the largest line number by default;
+    /// dragging the separator overrides that. The text keeps priority: the gutter never
+    /// takes more than a third of the control and numbers are clipped rather than the text.
+    /// </summary>
+    public double GutterWidth
+    {
+        get
+        {
+            if (!ShowLineNumbers)
+                return 0;
+
+            // Never wider than the fixed limit, and never more than a third of the control.
+            var maxWidth = Math.Min(MaxGutterWidth, Math.Max(0, ActualWidth / 3));
+
+            // In a very narrow window even the minimum does not fit; the text wins there.
+            if (maxWidth <= MinGutterWidth)
+                return maxWidth;
+
+            var width = _manualGutterWidth ?? MeasureGutterWidth();
+            var finalWidth = Math.Clamp(width, MinGutterWidth, maxWidth);
+            return finalWidth;
+        }
+    }
 
     /// <summary>How many lines fit into the viewport, fractions included.</summary>
     public double ViewportLineCount => _lineHeight <= 0 ? 0 : ActualHeight / _lineHeight;
@@ -329,23 +385,79 @@ public sealed class TextView : FrameworkElement
         _pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
         _widestVisibleLine = 0;
 
+        var gutterWidth = GutterWidth;
+
+        DrawGutterBackground(drawingContext, gutterWidth);
+        DrawLines(drawingContext, document, gutterWidth);
+    }
+
+    private void DrawGutterBackground(DrawingContext drawingContext, double gutterWidth)
+    {
+        if (gutterWidth <= 0)
+            return;
+
+        drawingContext.DrawRectangle(GutterBackground, null, new Rect(0, 0, gutterWidth, ActualHeight));
+
+        // Half a pixel keeps the separator crisp instead of blurred over two pixels.
+        var x = Math.Round(gutterWidth) - 0.5;
+        drawingContext.DrawLine(GutterSeparator, new Point(x, 0), new Point(x, ActualHeight));
+    }
+
+    private void DrawLines(DrawingContext drawingContext, ITextDocument document, double gutterWidth)
+    {
         var y = -_lineOffset;
         var lineIndex = _firstVisibleLine;
 
         while (y < ActualHeight && lineIndex < LineCount)
         {
+            if (gutterWidth > 0)
+                DrawLineNumber(drawingContext, document, lineIndex, y, gutterWidth);
+
             var text = document.GetLine(lineIndex);
-            var formatted = CreateFormattedText(text);
-            var origin = new Point(-_horizontalOffset, y);
+            var formatted = CreateFormattedText(text, Foreground);
+            var origin = new Point(gutterWidth - _horizontalOffset, y);
 
             _widestVisibleLine = Math.Max(_widestVisibleLine, formatted.WidthIncludingTrailingWhitespace);
+
+            // Text must never spill over the gutter when scrolled horizontally.
+            drawingContext.PushClip(new RectangleGeometry(new Rect(gutterWidth, 0, Math.Max(0, ActualWidth - gutterWidth), ActualHeight)));
 
             DrawSearchHighlights(drawingContext, formatted, text, lineIndex, origin);
             drawingContext.DrawText(formatted, origin);
 
+            drawingContext.Pop();
+
             y += _lineHeight;
             lineIndex++;
         }
+    }
+
+    /// <summary>
+    /// Numbers are right aligned next to the separator. A number too wide for the gutter
+    /// is clipped on the left, so its last digits stay readable and the text is untouched.
+    /// </summary>
+    private void DrawLineNumber(DrawingContext drawingContext, ITextDocument document, long lineIndex, double y, double gutterWidth)
+    {
+        // Under an active filter the original line numbers are the useful ones.
+        var displayedLine = document is FilteredTextDocument filtered
+            ? filtered.GetSourceLine(lineIndex) + 1
+            : lineIndex + 1;
+
+        var formatted = CreateFormattedText(displayedLine.ToString(), GutterForeground);
+        var x = gutterWidth - GutterPadding - formatted.Width;
+
+        drawingContext.PushClip(new RectangleGeometry(new Rect(0, 0, Math.Max(0, gutterWidth - GutterPadding / 2), ActualHeight)));
+        drawingContext.DrawText(formatted, new Point(x, y));
+        drawingContext.Pop();
+    }
+
+    /// <summary>Width needed by the largest line number the document can show.</summary>
+    private double MeasureGutterWidth()
+    {
+        var digits = Math.Max(2, LineCount.ToString().Length);
+        var sample = CreateFormattedText(new string('0', digits), GutterForeground);
+
+        return sample.Width + GutterPadding * 2;
     }
 
     /// <summary>
@@ -383,13 +495,13 @@ public sealed class TextView : FrameworkElement
         }
     }
 
-    private FormattedText CreateFormattedText(string text) => new(
+    private FormattedText CreateFormattedText(string text, Brush brush) => new(
         text,
         CultureInfo.CurrentCulture,
         FlowDirection.LeftToRight,
         _typeface,
         FontSize,
-        Foreground,
+        brush,
         _pixelsPerDip);
 
     protected override void OnMouseWheel(MouseWheelEventArgs e)
@@ -404,6 +516,56 @@ public sealed class TextView : FrameworkElement
     {
         base.OnMouseDown(e);
         Focus();
+
+        if (e.ChangedButton != MouseButton.Left || !IsOverGutterSeparator(e.GetPosition(this).X))
+            return;
+
+        // Double click on the separator goes back to the automatic width.
+        if (e.ClickCount == 2)
+        {
+            _manualGutterWidth = null;
+            InvalidateVisual();
+        }
+        else
+        {
+            _isDraggingGutter = true;
+            CaptureMouse();
+        }
+
+        e.Handled = true;
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+
+        var x = e.GetPosition(this).X;
+
+        if (_isDraggingGutter)
+        {
+            _manualGutterWidth = Math.Max(0, x);
+            InvalidateVisual();
+            return;
+        }
+
+        Cursor = IsOverGutterSeparator(x) ? Cursors.SizeWE : Cursors.Arrow;
+    }
+
+    protected override void OnMouseUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseUp(e);
+
+        if (!_isDraggingGutter)
+            return;
+
+        _isDraggingGutter = false;
+        ReleaseMouseCapture();
+    }
+
+    private bool IsOverGutterSeparator(double x)
+    {
+        var gutterWidth = GutterWidth;
+        return gutterWidth > 0 && Math.Abs(x - gutterWidth) <= GutterGripWidth;
     }
 
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -444,6 +606,13 @@ public sealed class TextView : FrameworkElement
     private static void OnFontChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         => ((TextView)d).UpdateFontMetrics();
 
+    private static Pen CreateFrozenPen(Color color)
+    {
+        var pen = new Pen(CreateFrozenBrush(color), 1);
+        pen.Freeze();
+        return pen;
+    }
+
     private static Brush CreateFrozenBrush(Color color)
     {
         var brush = new SolidColorBrush(color);
@@ -456,7 +625,7 @@ public sealed class TextView : FrameworkElement
         _typeface = new Typeface(FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
 
         // One sample line gives the exact height used for every row.
-        var sample = CreateFormattedText("Mg");
+        var sample = CreateFormattedText("Mg", Foreground);
         _lineHeight = Math.Max(1, Math.Ceiling(sample.Height));
 
         InvalidateVisual();

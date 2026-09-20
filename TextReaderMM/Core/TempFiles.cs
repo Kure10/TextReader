@@ -1,4 +1,5 @@
 using System.IO;
+using TextReaderMM.Diagnostics;
 
 namespace TextReaderMM.Core;
 
@@ -25,9 +26,10 @@ public static class TempFiles
         {
             File.Delete(path);
         }
-        catch (IOException)
+        catch (IOException ex)
         {
             // The file may still be open; it lives in the temp folder anyway.
+            Log.Warning($"Could not delete temp file {path}: {ex.Message}");
         }
     }
 }

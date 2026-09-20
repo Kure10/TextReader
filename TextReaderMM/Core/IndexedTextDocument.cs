@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using TextReaderMM.Core.Interfaces;
+using TextReaderMM.Diagnostics;
 
 namespace TextReaderMM.Core;
 
@@ -64,11 +65,28 @@ public sealed class IndexedTextDocument : ITextDocument
         TextEncodingKind encoding = TextEncodingDetector.Detect(stream, out var preambleLength);
         IndexedTextDocument document = new IndexedTextDocument(filePath, stream, encoding, preambleLength);
 
-        document.IndexingTask = Task.Run(
-            () => LineIndexer.Build(filePath, preambleLength, document._scanner, document._index, progress, document._cts.Token),
-            document._cts.Token);
+        Log.Info($"Opening {filePath} ({stream.Length:N0} bytes, {encoding}, BOM {preambleLength} B)");
+
+        document.IndexingTask = Task
+            .Run(() => LineIndexer.Build(filePath, preambleLength, document._scanner, document._index, progress, document._cts.Token),
+                document._cts.Token)
+            .ContinueWith(task => LogIndexingResult(task, filePath), TaskScheduler.Default);
 
         return document;
+    }
+
+    /// <summary>
+    /// Indexing runs on a background thread, so without this its exception would be
+    /// swallowed and the file would just look shorter than it is.
+    /// </summary>
+    private static void LogIndexingResult(Task task, string filePath)
+    {
+        if (task.IsFaulted)
+            Log.Error($"Indexing of {filePath} failed", task.Exception?.GetBaseException());
+        else if (task.IsCanceled)
+            Log.Info($"Indexing of {filePath} was cancelled");
+        else
+            Log.Info($"Indexing of {filePath} finished");
     }
 
     public string GetLine(long index)

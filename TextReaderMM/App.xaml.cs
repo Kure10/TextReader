@@ -1,4 +1,5 @@
 using System.Windows;
+using TextReaderMM.Diagnostics;
 using TextReaderMM.ViewModels;
 
 namespace TextReaderMM;
@@ -12,6 +13,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        Log.Info("Application started");
+
         var window = new MainWindow();
 
         // DialogService needs the window as dialog owner, so the view model is built after it.
@@ -23,6 +26,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Log.Info("Application exiting");
+
         // Closes the indexed file and removes any downloaded or generated temp file.
         (MainWindow?.DataContext as IDisposable)?.Dispose();
 
