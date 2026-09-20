@@ -1,0 +1,20 @@
+<Window x:Class="TextReaderMM.Views.UrlInputWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Open URL"
+        Width="520" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <StackPanel Margin="12">
+        <TextBlock Text="Address of a text or HTML document:" Margin="0,0,0,6" />
+
+        <TextBox x:Name="UrlBox"
+                 Text="https://"
+                 KeyDown="OnUrlBoxKeyDown" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Download" Padding="14,3" IsDefault="True" Click="OnOkClick" />
+            <Button Content="Cancel" Padding="14,3" Margin="8,0,0,0" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

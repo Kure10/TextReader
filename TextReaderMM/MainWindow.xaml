@@ -19,6 +19,7 @@
 
     <Window.InputBindings>
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenFileCommand}" />
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveAsCommand}" />
         <KeyBinding Key="F" Modifiers="Control" Command="Find" />
         <KeyBinding Key="F3" Command="{Binding Search.FindNextCommand}" />
         <KeyBinding Key="F3" Modifiers="Shift" Command="{Binding Search.FindPreviousCommand}" />
@@ -28,10 +29,10 @@
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
                 <MenuItem Header="_Open..." InputGestureText="Ctrl+O" Command="{Binding OpenFileCommand}" />
-                <MenuItem Header="Open _URL..." IsEnabled="False" />
-                <MenuItem Header="_Generate random text..." IsEnabled="False" />
+                <MenuItem Header="Open _URL..." Command="{Binding OpenUrlCommand}" />
+                <MenuItem Header="_Generate random text..." Command="{Binding GenerateRandomTextCommand}" />
                 <Separator />
-                <MenuItem Header="_Save as..." IsEnabled="False" />
+                <MenuItem Header="_Save as..." InputGestureText="Ctrl+S" Command="{Binding SaveAsCommand}" />
             </MenuItem>
             <MenuItem Header="_Search">
                 <MenuItem Header="_Find..." InputGestureText="Ctrl+F" Command="Find" />

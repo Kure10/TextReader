@@ -20,4 +20,12 @@ public partial class App : Application
         MainWindow = window;
         window.Show();
     }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        // Closes the indexed file and removes any downloaded or generated temp file.
+        (MainWindow?.DataContext as IDisposable)?.Dispose();
+
+        base.OnExit(e);
+    }
 }
