@@ -75,6 +75,11 @@
                           VerticalAlignment="Center"
                           IsChecked="{Binding Search.MatchCase}" />
 
+                <CheckBox Content="Show matching lines only"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          IsChecked="{Binding IsFilterActive}" />
+
                 <TextBlock Text="{Binding Search.ResultText}"
                            Margin="12,0,0,0"
                            VerticalAlignment="Center"
@@ -88,8 +93,8 @@
         </Border>
 
         <controls:TextViewer x:Name="Viewer"
-                             Document="{Binding Document}"
-                             LineCount="{Binding LineCount}"
+                             Document="{Binding DisplayDocument}"
+                             LineCount="{Binding DisplayLineCount}"
                              FirstVisibleLine="{Binding Search.FirstVisibleLine, Mode=TwoWay}"
                              SearchTerm="{Binding Search.SearchText}"
                              MatchCase="{Binding Search.MatchCase}"

@@ -8,9 +8,15 @@ namespace TextReaderMM.ViewModels;
 
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
+    /// <summary>A term matching everything must not exhaust memory.</summary>
+    private const int MaxFilterResults = 2_000_000;
+
     private readonly IDialogService _dialogs;
 
     private ITextDocument? _document;
+    private FilteredTextDocument? _filteredDocument;
+    private CancellationTokenSource? _filterCts;
+    private bool _isFilterActive;
     private string? _tempFilePath;
     private long _lineCount;
     private bool _isBusy;
@@ -34,6 +40,24 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <summary>Everything around the search bar lives in its own view model.</summary>
     public SearchViewModel Search { get; } = new();
 
+    /// <summary>When on, only the lines containing the search term are shown.</summary>
+    public bool IsFilterActive
+    {
+        get => _isFilterActive;
+        set
+        {
+            if (!SetField(ref _isFilterActive, value))
+                return;
+
+            ApplyFilter();
+        }
+    }
+
+    /// <summary>What the view actually shows: the filtered lines, or the whole document.</summary>
+    public ITextDocument? DisplayDocument => _filteredDocument ?? Document;
+
+    public long DisplayLineCount => _filteredDocument?.LineCount ?? LineCount;
+
     public ITextDocument? Document
     {
         get => _document;
@@ -43,6 +67,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 return;
 
             OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(DisplayDocument));
         }
     }
 
@@ -50,7 +75,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public long LineCount
     {
         get => _lineCount;
-        private set => SetField(ref _lineCount, value);
+        private set
+        {
+            if (!SetField(ref _lineCount, value))
+                return;
+
+            if (_filteredDocument is null)
+                OnPropertyChanged(nameof(DisplayLineCount));
+        }
     }
 
     public bool IsBusy
@@ -180,6 +212,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             TempFiles.TryDelete(_tempFilePath);
 
             _tempFilePath = isTemporary ? path : null;
+            _filteredDocument = null;
+            _isFilterActive = false;
+            OnPropertyChanged(nameof(IsFilterActive));
+
             Document = newDocument;
             Search.Document = newDocument;
             LineCount = 0;
@@ -191,6 +227,67 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _dialogs.ShowError($"Failed to open file:\n{ex.Message}");
             StatusText = "Load failed";
         }
+    }
+
+    /// <summary>
+    /// Builds (or drops) the filtered view. Collecting the line numbers runs in the
+    /// background; only the numbers are kept, never the text.
+    /// </summary>
+    private async void ApplyFilter()
+    {
+        _filterCts?.Cancel();
+        _filterCts = new CancellationTokenSource();
+        var ct = _filterCts.Token;
+
+        var document = Document;
+        var term = Search.SearchText;
+
+        if (!IsFilterActive || document is null || string.IsNullOrEmpty(term))
+        {
+            SetFilteredDocument(null);
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = "Filtering...";
+
+        try
+        {
+            var matchCase = Search.MatchCase;
+            var progress = new Progress<long>(line => StatusText = $"Filtering  |  {line:N0} lines scanned");
+
+            var lines = await Task.Run(
+                () => TextSearcher.FindMatchingLines(document, term, matchCase, MaxFilterResults, progress, ct),
+                ct);
+
+            if (ct.IsCancellationRequested)
+                return;
+
+            SetFilteredDocument(new FilteredTextDocument(document, lines));
+
+            var capped = lines.Count >= MaxFilterResults ? " (limit reached)" : string.Empty;
+            StatusText = $"Filter \"{term}\"  |  {lines.Count:N0} lines{capped}";
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer filter run took over.
+        }
+        finally
+        {
+            if (!ct.IsCancellationRequested)
+                IsBusy = false;
+        }
+    }
+
+    private void SetFilteredDocument(FilteredTextDocument? filtered)
+    {
+        _filteredDocument = filtered;
+
+        // The search works on what the user sees.
+        Search.Document = filtered ?? Document;
+
+        OnPropertyChanged(nameof(DisplayDocument));
+        OnPropertyChanged(nameof(DisplayLineCount));
     }
 
     private void OnIndexingProgress(IndexingProgress progress)
