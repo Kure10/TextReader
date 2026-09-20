@@ -3,13 +3,25 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:TextReaderMM.Controls"
         xmlns:vm="clr-namespace:TextReaderMM.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         Title="{Binding Title}" Height="700" Width="1100">
 
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </Window.Resources>
+
+    <Window.CommandBindings>
+        <CommandBinding Command="Find" Executed="OnFindExecuted" />
+    </Window.CommandBindings>
+
     <Window.InputBindings>
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenFileCommand}" />
+        <KeyBinding Key="F" Modifiers="Control" Command="Find" />
+        <KeyBinding Key="F3" Command="{Binding Search.FindNextCommand}" />
+        <KeyBinding Key="F3" Modifiers="Shift" Command="{Binding Search.FindPreviousCommand}" />
     </Window.InputBindings>
 
     <DockPanel>
@@ -21,16 +33,65 @@
                 <Separator />
                 <MenuItem Header="_Save as..." IsEnabled="False" />
             </MenuItem>
+            <MenuItem Header="_Search">
+                <MenuItem Header="_Find..." InputGestureText="Ctrl+F" Command="Find" />
+                <MenuItem Header="Find _next" InputGestureText="F3" Command="{Binding Search.FindNextCommand}" />
+                <MenuItem Header="Find _previous" InputGestureText="Shift+F3" Command="{Binding Search.FindPreviousCommand}" />
+            </MenuItem>
         </Menu>
 
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem Content="{Binding StatusText}" />
         </StatusBar>
 
-        <!-- TEMPORARY: replaced by the custom virtualized TextView in step 3 -->
-        <ListBox ItemsSource="{Binding Lines}"
-                 FontFamily="Consolas"
-                 VirtualizingPanel.IsVirtualizing="True"
-                 VirtualizingPanel.VirtualizationMode="Recycling" />
+        <Border DockPanel.Dock="Bottom"
+                Padding="6"
+                Background="#F3F3F3"
+                BorderBrush="#D0D0D0"
+                BorderThickness="0,1,0,0"
+                Visibility="{Binding Search.IsVisible, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Find:" VerticalAlignment="Center" Margin="0,0,6,0" />
+
+                <TextBox x:Name="SearchBox"
+                         Width="260"
+                         VerticalAlignment="Center"
+                         Text="{Binding Search.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         KeyDown="OnSearchBoxKeyDown" />
+
+                <Button Content="Previous"
+                        Margin="6,0,0,0"
+                        Padding="10,2"
+                        Command="{Binding Search.FindPreviousCommand}" />
+
+                <Button Content="Next"
+                        Margin="6,0,0,0"
+                        Padding="10,2"
+                        Command="{Binding Search.FindNextCommand}" />
+
+                <CheckBox Content="Match case"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          IsChecked="{Binding Search.MatchCase}" />
+
+                <TextBlock Text="{Binding Search.ResultText}"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="#606060" />
+
+                <Button Content="Close"
+                        Margin="12,0,0,0"
+                        Padding="10,2"
+                        Click="OnCloseSearchClick" />
+            </StackPanel>
+        </Border>
+
+        <controls:TextViewer x:Name="Viewer"
+                             Document="{Binding Document}"
+                             LineCount="{Binding LineCount}"
+                             FirstVisibleLine="{Binding Search.FirstVisibleLine, Mode=TwoWay}"
+                             SearchTerm="{Binding Search.SearchText}"
+                             MatchCase="{Binding Search.MatchCase}"
+                             CurrentMatch="{Binding Search.CurrentMatch}" />
     </DockPanel>
 </Window>

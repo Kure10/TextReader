@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using TextReaderMM.Core.Interfaces;
 
 namespace TextReaderMM.Core;
 
@@ -60,8 +61,8 @@ public sealed class IndexedTextDocument : ITextDocument
             ReadBufferSize,
             FileOptions.RandomAccess);
 
-        var encoding = TextEncodingDetector.Detect(stream, out var preambleLength);
-        var document = new IndexedTextDocument(filePath, stream, encoding, preambleLength);
+        TextEncodingKind encoding = TextEncodingDetector.Detect(stream, out var preambleLength);
+        IndexedTextDocument document = new IndexedTextDocument(filePath, stream, encoding, preambleLength);
 
         document.IndexingTask = Task.Run(
             () => LineIndexer.Build(filePath, preambleLength, document._scanner, document._index, progress, document._cts.Token),

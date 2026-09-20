@@ -1,4 +1,4 @@
-namespace TextReaderMM.ViewModels;
+namespace TextReaderMM.ViewModels.Interfaces;
 
 /// <summary>Keeps WPF dialogs out of view models.</summary>
 public interface IDialogService

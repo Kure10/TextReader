@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows.Input;
 using TextReaderMM.Core;
+using TextReaderMM.Core.Interfaces;
+using TextReaderMM.ViewModels.Interfaces;
 
 namespace TextReaderMM.ViewModels;
 
@@ -9,7 +11,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IDialogService _dialogs;
 
     private ITextDocument? _document;
-    private VirtualLineList? _lines;
+    private long _lineCount;
     private bool _isBusy;
     private string _statusText = "No file loaded";
 
@@ -20,6 +22,9 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public ICommand OpenFileCommand { get; }
+
+    /// <summary>Everything around the search bar lives in its own view model.</summary>
+    public SearchViewModel Search { get; } = new();
 
     public ITextDocument? Document
     {
@@ -33,11 +38,11 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>TEMPORARY: lines shown in the placeholder ListBox.</summary>
-    public VirtualLineList? Lines
+    /// <summary>Kept separate from the document because it grows while indexing runs.</summary>
+    public long LineCount
     {
-        get => _lines;
-        private set => SetField(ref _lines, value);
+        get => _lineCount;
+        private set => SetField(ref _lineCount, value);
     }
 
     public bool IsBusy
@@ -72,7 +77,8 @@ public sealed class MainViewModel : ObservableObject
 
             Document?.Dispose();
             Document = newDocument;
-            Lines = null;
+            Search.Document = newDocument;
+            LineCount = 0;
             StatusText = $"{FormatSize(newDocument.FileSize)}  |  {newDocument.Encoding}  |  indexing...";
         }
         catch (Exception ex)
@@ -91,8 +97,7 @@ public sealed class MainViewModel : ObservableObject
         if (Document is null)
             return;
 
-        // Rebuilding the list is what makes newly indexed lines visible in the ListBox.
-        Lines = new VirtualLineList(Document, progress.LineCount);
+        LineCount = progress.LineCount;
 
         StatusText = progress.IsComplete
             ? $"{FormatSize(Document.FileSize)}  |  {Document.Encoding}  |  {progress.LineCount:N0} lines"

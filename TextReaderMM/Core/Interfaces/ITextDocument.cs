@@ -1,4 +1,4 @@
-namespace TextReaderMM.Core;
+namespace TextReaderMM.Core.Interfaces;
 
 /// <summary>
 /// Read-only view of a (potentially huge) text document split into lines.

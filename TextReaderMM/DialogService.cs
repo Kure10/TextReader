@@ -1,6 +1,6 @@
 using System.Windows;
 using Microsoft.Win32;
-using TextReaderMM.ViewModels;
+using TextReaderMM.ViewModels.Interfaces;
 
 namespace TextReaderMM;
 

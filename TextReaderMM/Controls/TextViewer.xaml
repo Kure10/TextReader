@@ -1,0 +1,36 @@
+<UserControl x:Class="TextReaderMM.Controls.TextViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:TextReaderMM.Controls"
+             x:Name="Root">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <controls:TextView x:Name="View"
+                           Document="{Binding Document, ElementName=Root}"
+                           LineCount="{Binding LineCount, ElementName=Root}"
+                           FirstVisibleLine="{Binding FirstVisibleLine, ElementName=Root, Mode=TwoWay}"
+                           SearchTerm="{Binding SearchTerm, ElementName=Root}"
+                           MatchCase="{Binding MatchCase, ElementName=Root}"
+                           CurrentMatch="{Binding CurrentMatch, ElementName=Root}"
+                           FontFamily="Consolas"
+                           FontSize="14" />
+
+        <ScrollBar x:Name="VerticalScrollBar"
+                   Grid.Column="1"
+                   Orientation="Vertical"
+                   Minimum="0" />
+
+        <ScrollBar x:Name="HorizontalScrollBar"
+                   Grid.Row="1"
+                   Orientation="Horizontal"
+                   Minimum="0" />
+    </Grid>
+</UserControl>
