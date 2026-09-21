@@ -49,6 +49,9 @@ public static class AppCommands
     public static readonly RoutedUICommand ShowShortcuts = Create(
         "Keyboard shortcuts", nameof(ShowShortcuts), new KeyGesture(Key.F1));
 
+    public static readonly RoutedUICommand ShowReadme = Create(
+        "Open the readme", nameof(ShowReadme), new KeyGesture(Key.F2));
+
     private static RoutedUICommand Create(string text, string name, params KeyGesture[] gestures)
     {
         var collection = new InputGestureCollection();

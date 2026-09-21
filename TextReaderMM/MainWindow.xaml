@@ -87,6 +87,7 @@
                           IsChecked="{Binding Settings.ShowLineNumbers}" />
             </MenuItem>
             <MenuItem Header="_Legend" Command="{x:Static commands:AppCommands.ShowShortcuts}" />
+            <MenuItem Header="_Readme" Command="{x:Static commands:AppCommands.ShowReadme}" />
         </Menu>
 
         <StatusBar DockPanel.Dock="Bottom">

@@ -33,6 +33,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         SaveAsCommand = new RelayCommand(SaveAs, () => !IsBusy && Document is not null);
         GoToLineCommand = new RelayCommand(GoToLine, () => !IsBusy && DisplayDocument is not null);
         ShowShortcutsCommand = new RelayCommand(_dialogs.ShowShortcuts);
+        ShowReadmeCommand = new RelayCommand(ShowReadme, () => !IsBusy);
     }
 
     public ICommand OpenFileCommand { get; }
@@ -41,6 +42,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand SaveAsCommand { get; }
     public ICommand GoToLineCommand { get; }
     public ICommand ShowShortcutsCommand { get; }
+    public ICommand ShowReadmeCommand { get; }
 
     /// <summary>Asks the view to scroll somewhere; the view owns the scrolling itself.</summary>
     public event EventHandler<long>? ScrollToLineRequested;
@@ -210,6 +212,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>The reader opening its own documentation, which is also a nice smoke test.</summary>
+    private void ShowReadme()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "README.md");
+
+        if (!File.Exists(path))
+        {
+            _dialogs.ShowError("README.md was not found next to the application.");
+            return;
+        }
+
+        OpenDocument(path, isTemporary: false);
     }
 
     /// <summary>

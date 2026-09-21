@@ -744,9 +744,61 @@ public sealed class TextView : FrameworkElement
         if (position.X < GutterWidth)
             return;
 
-        StartSelection(position, extend: Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
+        switch (e.ClickCount)
+        {
+            case 2:
+                SelectWordAt(GetPositionFromPoint(position));
+                break;
+            case 3:
+                SelectLineAt(GetPositionFromPoint(position));
+                break;
+            default:
+                StartSelection(position, extend: Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
+                break;
+        }
+
         e.Handled = true;
     }
+
+    /// <summary>Selects the word under the caret; punctuation and spaces are the boundaries.</summary>
+    private void SelectWordAt(TextPosition position)
+    {
+        var text = Document?.GetLine(position.Line) ?? string.Empty;
+
+        if (text.Length == 0)
+            return;
+
+        // A click past the last character works on the character before it.
+        var index = Math.Clamp(position.Column, 0, text.Length - 1);
+
+        if (!IsWordCharacter(text[index]))
+            return;
+
+        var start = index;
+        while (start > 0 && IsWordCharacter(text[start - 1]))
+            start--;
+
+        var end = index;
+        while (end < text.Length - 1 && IsWordCharacter(text[end + 1]))
+            end++;
+
+        _selectionAnchor = new TextPosition(position.Line, start);
+        _selectionCaret = new TextPosition(position.Line, end + 1);
+
+        InvalidateVisual();
+    }
+
+    private void SelectLineAt(TextPosition position)
+    {
+        var text = Document?.GetLine(position.Line) ?? string.Empty;
+
+        _selectionAnchor = new TextPosition(position.Line, 0);
+        _selectionCaret = new TextPosition(position.Line, text.Length);
+
+        InvalidateVisual();
+    }
+
+    private static bool IsWordCharacter(char value) => char.IsLetterOrDigit(value) || value == '_';
 
     private void StartSelection(Point position, bool extend)
     {

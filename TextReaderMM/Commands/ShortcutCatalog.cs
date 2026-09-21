@@ -30,6 +30,8 @@ public static class ShortcutCatalog
 
             new ShortcutInfo("Selection", "Drag with the left button", "Select text"),
             new ShortcutInfo("Selection", "Shift + click", "Extend the selection"),
+            new ShortcutInfo("Selection", "Double click", "Select the word"),
+            new ShortcutInfo("Selection", "Triple click", "Select the line"),
             new ShortcutInfo("Selection", "Ctrl + C", "Copy the selection"),
             new ShortcutInfo("Selection", "Ctrl + A", "Select the whole document"),
 

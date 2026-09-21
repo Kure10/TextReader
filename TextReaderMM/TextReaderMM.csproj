@@ -15,4 +15,11 @@
       <Folder Include="ViewModels\" />
     </ItemGroup>
 
+
+    <ItemGroup>
+        <!-- The readme lives next to the solution; a copy goes next to the exe so the
+             application can open it in itself. -->
+        <Content Include="..\README.md" Link="README.md" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
 </Project>
