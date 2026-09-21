@@ -39,6 +39,12 @@ public sealed class DialogService(Window owner) : IDialogService
         return window.ShowDialog() == true ? window.LineIndex : null;
     }
 
+    public void ShowShortcuts()
+    {
+        var window = new ShortcutsWindow { Owner = owner };
+        window.ShowDialog();
+    }
+
     public void ShowError(string message)
         => MessageBox.Show(owner, message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 }

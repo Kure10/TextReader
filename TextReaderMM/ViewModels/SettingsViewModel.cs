@@ -16,6 +16,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     private double _fontSize = DefaultFontSize;
     private bool _showLineNumbers = true;
+    private int _maxCopyCharacters = 5000;
 
     public SettingsViewModel()
     {
@@ -47,5 +48,12 @@ public sealed class SettingsViewModel : ObservableObject
     {
         get => _showLineNumbers;
         set => SetField(ref _showLineNumbers, value);
+    }
+
+    /// <summary>How much text a single copy may put on the clipboard.</summary>
+    public int MaxCopyCharacters
+    {
+        get => _maxCopyCharacters;
+        set => SetField(ref _maxCopyCharacters, value);
     }
 }

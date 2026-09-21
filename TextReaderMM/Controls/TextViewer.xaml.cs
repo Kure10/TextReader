@@ -35,6 +35,10 @@ public partial class TextViewer : UserControl
     public static readonly DependencyProperty ShowLineNumbersProperty = DependencyProperty.Register(
         nameof(ShowLineNumbers), typeof(bool), typeof(TextViewer), new PropertyMetadata(true));
 
+    public static readonly DependencyProperty MaxCopyCharactersProperty = DependencyProperty.Register(
+        nameof(MaxCopyCharacters), typeof(int), typeof(TextViewer),
+        new PropertyMetadata(TextView.DefaultMaxCopyCharacters));
+
     // Guards the scrollbar -> view -> scrollbar feedback loop.
     private bool _isSyncing;
 
@@ -90,6 +94,12 @@ public partial class TextViewer : UserControl
     {
         get => (bool)GetValue(ShowLineNumbersProperty);
         set => SetValue(ShowLineNumbersProperty, value);
+    }
+
+    public int MaxCopyCharacters
+    {
+        get => (int)GetValue(MaxCopyCharactersProperty);
+        set => SetValue(MaxCopyCharactersProperty, value);
     }
 
     /// <summary>Hands the keyboard back to the text, e.g. after the search bar is closed.</summary>

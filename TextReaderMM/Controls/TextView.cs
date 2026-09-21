@@ -1,10 +1,14 @@
 using System.Globalization;
+using System.Text;
+using System.Windows.Threading;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using TextReaderMM.Core;
 using TextReaderMM.Core.Interfaces;
+using TextReaderMM.Diagnostics;
 using TextReaderMM.Diagnostics;
 
 namespace TextReaderMM.Controls;
@@ -35,6 +39,9 @@ public sealed class TextView : FrameworkElement
     /// <summary>Upper bound for the gutter; wider than this it only steals space from the text.</summary>
     private const double MaxGutterWidth = 110;
 
+    /// <summary>Default cap for copying; a selection can span the whole document.</summary>
+    public const int DefaultMaxCopyCharacters = 5000;
+
     public static readonly DependencyProperty DocumentProperty = DependencyProperty.Register(
         nameof(Document), typeof(ITextDocument), typeof(TextView),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnDocumentChanged));
@@ -63,6 +70,14 @@ public sealed class TextView : FrameworkElement
         nameof(CurrentMatch), typeof(SearchMatch?), typeof(TextView),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnCurrentMatchChanged));
 
+    /// <summary>
+    /// A selection can span the whole document, which is far more than the clipboard
+    /// (or memory) can take, so copying stops at this many characters.
+    /// </summary>
+    public static readonly DependencyProperty MaxCopyCharactersProperty = DependencyProperty.Register(
+        nameof(MaxCopyCharacters), typeof(int), typeof(TextView),
+        new FrameworkPropertyMetadata(DefaultMaxCopyCharacters));
+
     public static readonly DependencyProperty ShowLineNumbersProperty = DependencyProperty.Register(
         nameof(ShowLineNumbers), typeof(bool), typeof(TextView),
         new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender));
@@ -87,6 +102,8 @@ public sealed class TextView : FrameworkElement
     private static readonly Brush GutterForeground = CreateFrozenBrush(Color.FromRgb(150, 150, 150));
     private static readonly Pen GutterSeparator = CreateFrozenPen(Color.FromRgb(210, 210, 210));
 
+    private static readonly Brush SelectionBrush = CreateFrozenBrush(Color.FromRgb(173, 214, 255));
+
     private static readonly Brush MatchBrush = CreateFrozenBrush(Color.FromRgb(255, 233, 150));
     private static readonly Brush CurrentMatchBrush = CreateFrozenBrush(Color.FromRgb(255, 165, 60));
 
@@ -108,10 +125,34 @@ public sealed class TextView : FrameworkElement
     private double? _manualGutterWidth;
     private bool _isDraggingGutter;
 
+    // Selection. Anchor is where the drag started, caret is where the mouse is now.
+    private TextPosition? _selectionAnchor;
+    private TextPosition _selectionCaret;
+    private bool _isSelecting;
+    private double _charWidth = 8;
+    private readonly DispatcherTimer _autoScrollTimer;
+    private double _autoScrollLines;
+
     public TextView()
     {
         Focusable = true;
         ClipToBounds = true;
+
+        // Dragging past the top or bottom edge keeps scrolling while the mouse stays there.
+        _autoScrollTimer = new DispatcherTimer(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(30) };
+        _autoScrollTimer.Tick += OnAutoScrollTick;
+
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, OnCopy, OnCanCopy));
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.SelectAll, OnSelectAll, OnCanSelectAll));
+
+        ContextMenu = new ContextMenu
+        {
+            Items =
+            {
+                new MenuItem { Command = ApplicationCommands.Copy },
+                new MenuItem { Command = ApplicationCommands.SelectAll }
+            }
+        };
     }
 
     /// <summary>Raised whenever the visible range changes, so scrollbars can follow.</summary>
@@ -181,6 +222,12 @@ public sealed class TextView : FrameworkElement
     {
         get => (bool)GetValue(ShowLineNumbersProperty);
         set => SetValue(ShowLineNumbersProperty, value);
+    }
+
+    public int MaxCopyCharacters
+    {
+        get => (int)GetValue(MaxCopyCharactersProperty);
+        set => SetValue(MaxCopyCharactersProperty, value);
     }
 
     public double LineHeight => _lineHeight;
@@ -374,6 +421,137 @@ public sealed class TextView : FrameworkElement
         e.Handled = true;
     }
 
+    public bool HasSelection => _selectionAnchor is { } anchor && anchor != _selectionCaret;
+
+    public void ClearSelection()
+    {
+        if (_selectionAnchor is null)
+            return;
+
+        _selectionAnchor = null;
+        InvalidateVisual();
+    }
+
+    public void SelectAll()
+    {
+        var document = Document;
+
+        if (document is null || LineCount == 0)
+            return;
+
+        var lastLine = LineCount - 1;
+
+        _selectionAnchor = new TextPosition(0, 0);
+        _selectionCaret = new TextPosition(lastLine, document.GetLine(lastLine).Length);
+
+        InvalidateVisual();
+    }
+
+    /// <summary>
+    /// Text of the current selection, cut off at <see cref="MaxCopyCharacters"/>.
+    /// Returns null when nothing is selected.
+    /// </summary>
+    public string? GetSelectedText(out bool truncated)
+    {
+        truncated = false;
+
+        var document = Document;
+        if (document is null || !HasSelection)
+            return null;
+
+        var (start, end) = GetOrderedSelection();
+        var limit = Math.Max(1, MaxCopyCharacters);
+        var builder = new StringBuilder();
+
+        for (var line = start.Line; line <= end.Line && line < LineCount; line++)
+        {
+            var text = document.GetLine(line);
+            var from = line == start.Line ? Math.Min(start.Column, text.Length) : 0;
+            var to = line == end.Line ? Math.Min(end.Column, text.Length) : text.Length;
+
+            if (to > from)
+                builder.Append(text, from, to - from);
+
+            if (line != end.Line)
+                builder.Append(Environment.NewLine);
+
+            if (builder.Length >= limit)
+            {
+                truncated = true;
+                break;
+            }
+        }
+
+        return builder.ToString(0, Math.Min(builder.Length, limit));
+    }
+
+    private (TextPosition Start, TextPosition End) GetOrderedSelection()
+    {
+        var anchor = _selectionAnchor ?? _selectionCaret;
+        return anchor <= _selectionCaret ? (anchor, _selectionCaret) : (_selectionCaret, anchor);
+    }
+
+    /// <summary>
+    /// Turns a mouse position into a line and column. The column is a plain division
+    /// because the font is monospaced; a proportional font would need measuring.
+    /// </summary>
+    private TextPosition GetPositionFromPoint(Point point)
+    {
+        var document = Document;
+
+        if (document is null || LineCount == 0 || _lineHeight <= 0)
+            return new TextPosition(0, 0);
+
+        var rawLine = _firstVisibleLine + (long)Math.Floor((point.Y + _lineOffset) / _lineHeight);
+        var line = Math.Clamp(rawLine, 0, LineCount - 1);
+
+        var x = point.X - GutterWidth + _horizontalOffset;
+        var column = _charWidth <= 0 ? 0 : (int)Math.Round(x / _charWidth);
+
+        return new TextPosition(line, Math.Clamp(column, 0, document.GetLine(line).Length));
+    }
+
+    private void OnCanCopy(object sender, CanExecuteRoutedEventArgs e) => e.CanExecute = HasSelection;
+
+    private void OnCopy(object sender, ExecutedRoutedEventArgs e)
+    {
+        var text = GetSelectedText(out var truncated);
+
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        try
+        {
+            Clipboard.SetText(text);
+
+            if (truncated)
+                Log.Warning($"Selection was longer than {MaxCopyCharacters:N0} characters and was cut off when copying.");
+        }
+        catch (Exception exception)
+        {
+            // The clipboard is shared with other processes and can be locked by them.
+            Log.Error("Copying to the clipboard failed", exception);
+        }
+    }
+
+    private void OnCanSelectAll(object sender, CanExecuteRoutedEventArgs e) => e.CanExecute = LineCount > 0;
+
+    private void OnSelectAll(object sender, ExecutedRoutedEventArgs e) => SelectAll();
+
+    private void OnAutoScrollTick(object? sender, EventArgs e)
+    {
+        if (!_isSelecting)
+        {
+            _autoScrollTimer.Stop();
+            return;
+        }
+
+        VerticalScrollPosition += _autoScrollLines;
+        _selectionCaret = GetPositionFromPoint(Mouse.GetPosition(this));
+
+        InvalidateVisual();
+    }
+
     protected override void OnRender(DrawingContext drawingContext)
     {
         drawingContext.DrawRectangle(Background, null, new Rect(RenderSize));
@@ -422,6 +600,7 @@ public sealed class TextView : FrameworkElement
             // Text must never spill over the gutter when scrolled horizontally.
             drawingContext.PushClip(new RectangleGeometry(new Rect(gutterWidth, 0, Math.Max(0, ActualWidth - gutterWidth), ActualHeight)));
 
+            DrawSelection(drawingContext, formatted, text, lineIndex, origin);
             DrawSearchHighlights(drawingContext, formatted, text, lineIndex, origin);
             drawingContext.DrawText(formatted, origin);
 
@@ -458,6 +637,28 @@ public sealed class TextView : FrameworkElement
         var sample = CreateFormattedText(new string('0', digits), GutterForeground);
 
         return sample.Width + GutterPadding * 2;
+    }
+
+    private void DrawSelection(DrawingContext drawingContext, FormattedText formatted, string text, long lineIndex, Point origin)
+    {
+        if (!HasSelection)
+            return;
+
+        var (start, end) = GetOrderedSelection();
+
+        if (lineIndex < start.Line || lineIndex > end.Line)
+            return;
+
+        var from = lineIndex == start.Line ? Math.Min(start.Column, text.Length) : 0;
+        var to = lineIndex == end.Line ? Math.Min(end.Column, text.Length) : text.Length;
+
+        if (to <= from)
+            return;
+
+        var geometry = formatted.BuildHighlightGeometry(origin, from, to - from);
+
+        if (geometry is not null)
+            drawingContext.DrawGeometry(SelectionBrush, null, geometry);
     }
 
     /// <summary>
@@ -517,22 +718,49 @@ public sealed class TextView : FrameworkElement
         base.OnMouseDown(e);
         Focus();
 
-        if (e.ChangedButton != MouseButton.Left || !IsOverGutterSeparator(e.GetPosition(this).X))
+        if (e.ChangedButton != MouseButton.Left)
             return;
 
-        // Double click on the separator goes back to the automatic width.
-        if (e.ClickCount == 2)
+        var position = e.GetPosition(this);
+
+        if (IsOverGutterSeparator(position.X))
         {
-            _manualGutterWidth = null;
-            InvalidateVisual();
-        }
-        else
-        {
-            _isDraggingGutter = true;
-            CaptureMouse();
+            // Double click on the separator goes back to the automatic width.
+            if (e.ClickCount == 2)
+            {
+                _manualGutterWidth = null;
+                InvalidateVisual();
+            }
+            else
+            {
+                _isDraggingGutter = true;
+                CaptureMouse();
+            }
+
+            e.Handled = true;
+            return;
         }
 
+        if (position.X < GutterWidth)
+            return;
+
+        StartSelection(position, extend: Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
         e.Handled = true;
+    }
+
+    private void StartSelection(Point position, bool extend)
+    {
+        var caret = GetPositionFromPoint(position);
+
+        // Shift keeps the existing anchor, so the selection grows instead of starting over.
+        if (!extend || _selectionAnchor is null)
+            _selectionAnchor = caret;
+
+        _selectionCaret = caret;
+        _isSelecting = true;
+
+        CaptureMouse();
+        InvalidateVisual();
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -548,18 +776,49 @@ public sealed class TextView : FrameworkElement
             return;
         }
 
-        Cursor = IsOverGutterSeparator(x) ? Cursors.SizeWE : Cursors.Arrow;
+        if (_isSelecting)
+        {
+            ExtendSelection(e.GetPosition(this));
+            return;
+        }
+
+        Cursor = IsOverGutterSeparator(x) ? Cursors.SizeWE
+            : x < GutterWidth ? Cursors.Arrow
+            : Cursors.IBeam;
     }
 
     protected override void OnMouseUp(MouseButtonEventArgs e)
     {
         base.OnMouseUp(e);
 
+        if (_isSelecting)
+        {
+            _isSelecting = false;
+            _autoScrollTimer.Stop();
+            ReleaseMouseCapture();
+            return;
+        }
+
         if (!_isDraggingGutter)
             return;
 
         _isDraggingGutter = false;
         ReleaseMouseCapture();
+    }
+
+    private void ExtendSelection(Point position)
+    {
+        _selectionCaret = GetPositionFromPoint(position);
+
+        // Outside the viewport the view keeps scrolling on a timer, one line per tick.
+        _autoScrollLines = position.Y < 0 ? -1 : position.Y > ActualHeight ? 1 : 0;
+
+        if (_autoScrollLines == 0)
+            _autoScrollTimer.Stop();
+        else if (!_autoScrollTimer.IsEnabled)
+            _autoScrollTimer.Start();
+
+        InvalidateVisual();
     }
 
     private bool IsOverGutterSeparator(double x)
@@ -587,6 +846,7 @@ public sealed class TextView : FrameworkElement
     {
         var view = (TextView)d;
         view.StopAnimation();
+        view._selectionAnchor = null;
         view._firstVisibleLine = 0;
         view._lineOffset = 0;
         view._horizontalOffset = 0;
@@ -627,6 +887,9 @@ public sealed class TextView : FrameworkElement
         // One sample line gives the exact height used for every row.
         var sample = CreateFormattedText("Mg", Foreground);
         _lineHeight = Math.Max(1, Math.Ceiling(sample.Height));
+
+        // The font is monospaced, so one character is enough to know every column position.
+        _charWidth = Math.Max(1, CreateFormattedText("0", Foreground).WidthIncludingTrailingWhitespace);
 
         InvalidateVisual();
         ScrollChanged?.Invoke(this, EventArgs.Empty);

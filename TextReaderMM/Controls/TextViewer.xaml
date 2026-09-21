@@ -22,7 +22,8 @@
                            CurrentMatch="{Binding CurrentMatch, ElementName=Root}"
                            FontFamily="Consolas"
                            FontSize="{Binding FontSize, ElementName=Root}"
-                           ShowLineNumbers="{Binding ShowLineNumbers, ElementName=Root}" />
+                           ShowLineNumbers="{Binding ShowLineNumbers, ElementName=Root}"
+                           MaxCopyCharacters="{Binding MaxCopyCharacters, ElementName=Root}" />
 
         <ScrollBar x:Name="VerticalScrollBar"
                    Grid.Column="1"

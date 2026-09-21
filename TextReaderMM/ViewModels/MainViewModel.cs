@@ -32,6 +32,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         GenerateRandomTextCommand = new RelayCommand(GenerateRandomText, () => !IsBusy);
         SaveAsCommand = new RelayCommand(SaveAs, () => !IsBusy && Document is not null);
         GoToLineCommand = new RelayCommand(GoToLine, () => !IsBusy && DisplayDocument is not null);
+        ShowShortcutsCommand = new RelayCommand(_dialogs.ShowShortcuts);
     }
 
     public ICommand OpenFileCommand { get; }
@@ -39,6 +40,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand GenerateRandomTextCommand { get; }
     public ICommand SaveAsCommand { get; }
     public ICommand GoToLineCommand { get; }
+    public ICommand ShowShortcutsCommand { get; }
 
     /// <summary>Asks the view to scroll somewhere; the view owns the scrolling itself.</summary>
     public event EventHandler<long>? ScrollToLineRequested;

@@ -46,6 +46,9 @@ public static class AppCommands
     public static readonly RoutedUICommand GoToLine = Create(
         "Go to line", nameof(GoToLine), new KeyGesture(Key.G, ModifierKeys.Control));
 
+    public static readonly RoutedUICommand ShowShortcuts = Create(
+        "Keyboard shortcuts", nameof(ShowShortcuts), new KeyGesture(Key.F1));
+
     private static RoutedUICommand Create(string text, string name, params KeyGesture[] gestures)
     {
         var collection = new InputGestureCollection();

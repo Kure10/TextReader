@@ -29,6 +29,9 @@
                 <MenuItem Header="Find _previous" Command="{x:Static commands:AppCommands.FindPrevious}" />
                 <Separator />
                 <MenuItem Header="_Go to line..." Command="{x:Static commands:AppCommands.GoToLine}" />
+                <Separator />
+                <MenuItem Header="_Copy" Command="Copy" CommandTarget="{Binding ElementName=Viewer}" />
+                <MenuItem Header="Select _all" Command="SelectAll" CommandTarget="{Binding ElementName=Viewer}" />
             </MenuItem>
             <MenuItem Header="Se_ttings">
                 <MenuItem StaysOpenOnClick="True">
@@ -55,10 +58,35 @@
 
                 <MenuItem Header="_Reset font size" Command="{x:Static commands:AppCommands.ResetFontSize}" />
                 <Separator />
+
+                <MenuItem StaysOpenOnClick="True">
+                    <MenuItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Copy limit" VerticalAlignment="Center" Width="60" />
+
+                            <Slider Width="150"
+                                    VerticalAlignment="Center"
+                                    Minimum="1000"
+                                    Maximum="50000"
+                                    TickFrequency="1000"
+                                    IsSnapToTickEnabled="True"
+                                    Value="{Binding Settings.MaxCopyCharacters}" />
+
+                            <TextBlock Text="{Binding Settings.MaxCopyCharacters, StringFormat={}{0:N0} ch}"
+                                       Width="70"
+                                       Margin="8,0,0,0"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </MenuItem.Header>
+                </MenuItem>
+
+                <Separator />
                 <MenuItem Header="Show _line numbers"
                           IsCheckable="True"
                           IsChecked="{Binding Settings.ShowLineNumbers}" />
             </MenuItem>
+            <MenuItem Header="_Legend" Command="{x:Static commands:AppCommands.ShowShortcuts}" />
         </Menu>
 
         <StatusBar DockPanel.Dock="Bottom">
@@ -120,6 +148,7 @@
                              MatchCase="{Binding Search.MatchCase}"
                              CurrentMatch="{Binding Search.CurrentMatch}"
                              FontSize="{Binding Settings.FontSize}"
-                             ShowLineNumbers="{Binding Settings.ShowLineNumbers}" />
+                             ShowLineNumbers="{Binding Settings.ShowLineNumbers}"
+                             MaxCopyCharacters="{Binding Settings.MaxCopyCharacters}" />
     </DockPanel>
 </Window>

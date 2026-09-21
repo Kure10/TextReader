@@ -16,5 +16,7 @@ public interface IDialogService
     /// <summary>Returns the zero-based line to jump to, or null when cancelled.</summary>
     long? ShowGoToLineDialog(long lineCount, long currentLine);
 
+    void ShowShortcuts();
+
     void ShowError(string message);
 }
