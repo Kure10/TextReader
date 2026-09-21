@@ -30,6 +30,35 @@
                 <Separator />
                 <MenuItem Header="_Go to line..." Command="{x:Static commands:AppCommands.GoToLine}" />
             </MenuItem>
+            <MenuItem Header="Se_ttings">
+                <MenuItem StaysOpenOnClick="True">
+                    <MenuItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Font size" VerticalAlignment="Center" Width="60" />
+
+                            <Slider Width="150"
+                                    VerticalAlignment="Center"
+                                    Minimum="8"
+                                    Maximum="40"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Value="{Binding Settings.FontSize}" />
+
+                            <TextBlock Text="{Binding Settings.FontSize, StringFormat={}{0:0} px}"
+                                       Width="44"
+                                       Margin="8,0,0,0"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </MenuItem.Header>
+                </MenuItem>
+
+                <MenuItem Header="_Reset font size" Command="{x:Static commands:AppCommands.ResetFontSize}" />
+                <Separator />
+                <MenuItem Header="Show _line numbers"
+                          IsCheckable="True"
+                          IsChecked="{Binding Settings.ShowLineNumbers}" />
+            </MenuItem>
         </Menu>
 
         <StatusBar DockPanel.Dock="Bottom">
@@ -89,6 +118,8 @@
                              FirstVisibleLine="{Binding Search.FirstVisibleLine, Mode=TwoWay}"
                              SearchTerm="{Binding Search.SearchText}"
                              MatchCase="{Binding Search.MatchCase}"
-                             CurrentMatch="{Binding Search.CurrentMatch}" />
+                             CurrentMatch="{Binding Search.CurrentMatch}"
+                             FontSize="{Binding Settings.FontSize}"
+                             ShowLineNumbers="{Binding Settings.ShowLineNumbers}" />
     </DockPanel>
 </Window>

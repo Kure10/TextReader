@@ -32,6 +32,9 @@ public partial class TextViewer : UserControl
     public static readonly DependencyProperty CurrentMatchProperty = DependencyProperty.Register(
         nameof(CurrentMatch), typeof(SearchMatch?), typeof(TextViewer), new PropertyMetadata(null));
 
+    public static readonly DependencyProperty ShowLineNumbersProperty = DependencyProperty.Register(
+        nameof(ShowLineNumbers), typeof(bool), typeof(TextViewer), new PropertyMetadata(true));
+
     // Guards the scrollbar -> view -> scrollbar feedback loop.
     private bool _isSyncing;
 
@@ -81,6 +84,12 @@ public partial class TextViewer : UserControl
     {
         get => (SearchMatch?)GetValue(CurrentMatchProperty);
         set => SetValue(CurrentMatchProperty, value);
+    }
+
+    public bool ShowLineNumbers
+    {
+        get => (bool)GetValue(ShowLineNumbersProperty);
+        set => SetValue(ShowLineNumbersProperty, value);
     }
 
     /// <summary>Hands the keyboard back to the text, e.g. after the search bar is closed.</summary>

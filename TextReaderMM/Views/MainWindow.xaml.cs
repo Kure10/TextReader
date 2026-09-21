@@ -35,6 +35,9 @@ public partial class MainWindow : Window
         Bind(AppCommands.GenerateRandomText, viewModel.GenerateRandomTextCommand);
         Bind(AppCommands.SaveAs, viewModel.SaveAsCommand);
         Bind(AppCommands.GoToLine, viewModel.GoToLineCommand);
+        Bind(AppCommands.IncreaseFontSize, viewModel.Settings.IncreaseFontSizeCommand);
+        Bind(AppCommands.DecreaseFontSize, viewModel.Settings.DecreaseFontSizeCommand);
+        Bind(AppCommands.ResetFontSize, viewModel.Settings.ResetFontSizeCommand);
         Bind(AppCommands.FindNext, viewModel.Search.FindNextCommand);
         Bind(AppCommands.FindPrevious, viewModel.Search.FindPreviousCommand);
 

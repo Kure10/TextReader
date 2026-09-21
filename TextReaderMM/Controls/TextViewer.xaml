@@ -21,7 +21,8 @@
                            MatchCase="{Binding MatchCase, ElementName=Root}"
                            CurrentMatch="{Binding CurrentMatch, ElementName=Root}"
                            FontFamily="Consolas"
-                           FontSize="14" />
+                           FontSize="{Binding FontSize, ElementName=Root}"
+                           ShowLineNumbers="{Binding ShowLineNumbers, ElementName=Root}" />
 
         <ScrollBar x:Name="VerticalScrollBar"
                    Grid.Column="1"

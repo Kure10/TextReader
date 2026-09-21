@@ -46,6 +46,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <summary>Everything around the search bar lives in its own view model.</summary>
     public SearchViewModel Search { get; } = new();
 
+    /// <summary>Font size and other display options.</summary>
+    public SettingsViewModel Settings { get; } = new();
+
     /// <summary>When on, only the lines containing the search term are shown.</summary>
     public bool IsFilterActive
     {

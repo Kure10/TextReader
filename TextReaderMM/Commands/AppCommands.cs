@@ -32,6 +32,17 @@ public static class AppCommands
     public static readonly RoutedUICommand FindPrevious = Create(
         "Find previous", nameof(FindPrevious), new KeyGesture(Key.F3, ModifierKeys.Shift));
 
+    public static readonly RoutedUICommand IncreaseFontSize = Create(
+        "Increase font size", nameof(IncreaseFontSize),
+        new KeyGesture(Key.OemPlus, ModifierKeys.Control), new KeyGesture(Key.Add, ModifierKeys.Control));
+
+    public static readonly RoutedUICommand DecreaseFontSize = Create(
+        "Decrease font size", nameof(DecreaseFontSize),
+        new KeyGesture(Key.OemMinus, ModifierKeys.Control), new KeyGesture(Key.Subtract, ModifierKeys.Control));
+
+    public static readonly RoutedUICommand ResetFontSize = Create(
+        "Reset font size", nameof(ResetFontSize), new KeyGesture(Key.D0, ModifierKeys.Control));
+
     public static readonly RoutedUICommand GoToLine = Create(
         "Go to line", nameof(GoToLine), new KeyGesture(Key.G, ModifierKeys.Control));
 
