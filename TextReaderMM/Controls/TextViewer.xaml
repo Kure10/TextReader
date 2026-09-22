@@ -23,7 +23,8 @@
                            FontFamily="Consolas"
                            FontSize="{Binding FontSize, ElementName=Root}"
                            ShowLineNumbers="{Binding ShowLineNumbers, ElementName=Root}"
-                           MaxCopyCharacters="{Binding MaxCopyCharacters, ElementName=Root}" />
+                           MaxCopyCharacters="{Binding MaxCopyCharacters, ElementName=Root}"
+                           AnimationSpeed="{Binding AnimationSpeed, ElementName=Root}" />
 
         <ScrollBar x:Name="VerticalScrollBar"
                    Grid.Column="1"

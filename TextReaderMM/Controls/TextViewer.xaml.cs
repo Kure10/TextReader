@@ -39,6 +39,10 @@ public partial class TextViewer : UserControl
         nameof(MaxCopyCharacters), typeof(int), typeof(TextViewer),
         new PropertyMetadata(TextView.DefaultMaxCopyCharacters));
 
+    public static readonly DependencyProperty AnimationSpeedProperty = DependencyProperty.Register(
+        nameof(AnimationSpeed), typeof(double), typeof(TextViewer),
+        new PropertyMetadata(TextView.DefaultAnimationSpeed));
+
     // Guards the scrollbar -> view -> scrollbar feedback loop.
     private bool _isSyncing;
 
@@ -100,6 +104,12 @@ public partial class TextViewer : UserControl
     {
         get => (int)GetValue(MaxCopyCharactersProperty);
         set => SetValue(MaxCopyCharactersProperty, value);
+    }
+
+    public double AnimationSpeed
+    {
+        get => (double)GetValue(AnimationSpeedProperty);
+        set => SetValue(AnimationSpeedProperty, value);
     }
 
     /// <summary>Hands the keyboard back to the text, e.g. after the search bar is closed.</summary>

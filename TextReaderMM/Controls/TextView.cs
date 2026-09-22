@@ -25,7 +25,7 @@ public sealed class TextView : FrameworkElement
     private const double HorizontalStep = 48;
 
     /// <summary>Higher value means a shorter, snappier glide.</summary>
-    private const double AnimationSpeed = 14;
+    public const double DefaultAnimationSpeed = 14;
 
     /// <summary>Padding on both sides of the line numbers.</summary>
     private const double GutterPadding = 10;
@@ -80,6 +80,13 @@ public sealed class TextView : FrameworkElement
     public static readonly DependencyProperty MaxCopyCharactersProperty = DependencyProperty.Register(
         nameof(MaxCopyCharacters), typeof(int), typeof(TextView),
         new FrameworkPropertyMetadata(DefaultMaxCopyCharacters));
+
+    /// <summary>
+    /// How quickly the view eases towards its target: higher is snappier, lower glides longer.
+    /// </summary>
+    public static readonly DependencyProperty AnimationSpeedProperty = DependencyProperty.Register(
+        nameof(AnimationSpeed), typeof(double), typeof(TextView),
+        new FrameworkPropertyMetadata(DefaultAnimationSpeed));
 
     public static readonly DependencyProperty ShowLineNumbersProperty = DependencyProperty.Register(
         nameof(ShowLineNumbers), typeof(bool), typeof(TextView),
@@ -231,6 +238,12 @@ public sealed class TextView : FrameworkElement
     {
         get => (int)GetValue(MaxCopyCharactersProperty);
         set => SetValue(MaxCopyCharactersProperty, value);
+    }
+
+    public double AnimationSpeed
+    {
+        get => (double)GetValue(AnimationSpeedProperty);
+        set => SetValue(AnimationSpeedProperty, value);
     }
 
     public double LineHeight => _lineHeight;
@@ -389,7 +402,7 @@ public sealed class TextView : FrameworkElement
 
         // Exponential easing: fast at first, slowing down near the target,
         // and independent of the frame rate.
-        var factor = 1 - Math.Exp(-AnimationSpeed * elapsed.TotalSeconds);
+        var factor = 1 - Math.Exp(-Math.Max(1, AnimationSpeed) * elapsed.TotalSeconds);
         SetVerticalScrollPosition(current + remaining * factor);
     }
 
