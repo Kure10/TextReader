@@ -42,6 +42,9 @@ public sealed class TextView : FrameworkElement
     /// <summary>How many characters of breathing space to keep around a match, in characters.</summary>
     private const double MatchHorizontalMargin = 8;
 
+    /// <summary>Lines left above a line jumped to, so it does not sit right at the top edge.</summary>
+    private const double GoToLineTopMargin = 3;
+
     /// <summary>Default cap for copying; a selection can span the whole document.</summary>
     public const int DefaultMaxCopyCharacters = 5000;
 
@@ -114,6 +117,8 @@ public sealed class TextView : FrameworkElement
 
     private static readonly Brush SelectionBrush = CreateFrozenBrush(Color.FromRgb(173, 214, 255));
 
+    private static readonly Brush CurrentLineBrush = CreateFrozenBrush(Color.FromRgb(255, 246, 205));
+
     private static readonly Brush MatchBrush = CreateFrozenBrush(Color.FromRgb(255, 233, 150));
     private static readonly Brush CurrentMatchBrush = CreateFrozenBrush(Color.FromRgb(255, 165, 60));
 
@@ -134,6 +139,9 @@ public sealed class TextView : FrameworkElement
     // Line number gutter. Null width means "as wide as the largest line number needs".
     private double? _manualGutterWidth;
     private bool _isDraggingGutter;
+
+    // The line last jumped to, drawn with a highlight until another document is opened.
+    private long? _highlightedLine;
 
     // Selection. Anchor is where the drag started, caret is where the mouse is now.
     private TextPosition? _selectionAnchor;
@@ -354,6 +362,27 @@ public sealed class TextView : FrameworkElement
             return;
 
         AnimateTo(line - viewport / 3);
+    }
+
+    /// <summary>
+    /// Jumps to a line, leaving a few lines above it, and marks it so it can be spotted
+    /// at a glance. Used by "go to line", where the user knows the number but not the text.
+    /// </summary>
+    public void GoToLine(long line)
+    {
+        _highlightedLine = line;
+
+        AnimateTo(line - GoToLineTopMargin);
+        InvalidateVisual();
+    }
+
+    public void ClearHighlightedLine()
+    {
+        if (_highlightedLine is null)
+            return;
+
+        _highlightedLine = null;
+        InvalidateVisual();
     }
 
     /// <summary>
@@ -629,6 +658,9 @@ public sealed class TextView : FrameworkElement
 
         while (y < ActualHeight && lineIndex < LineCount)
         {
+            if (_highlightedLine == lineIndex)
+                drawingContext.DrawRectangle(CurrentLineBrush, null, new Rect(0, y, ActualWidth, _lineHeight));
+
             if (gutterWidth > 0)
                 DrawLineNumber(drawingContext, document, lineIndex, y, gutterWidth);
 
@@ -759,9 +791,11 @@ public sealed class TextView : FrameworkElement
         base.OnMouseDown(e);
         Focus();
 
-        if (e.ChangedButton != MouseButton.Left)
+        // Without a document there is nothing to select, resize or highlight.
+        if (Document is null || e.ChangedButton != MouseButton.Left)
             return;
 
+        ClearHighlightedLine();
         var position = e.GetPosition(this);
 
         if (IsOverGutterSeparator(position.X))
@@ -939,6 +973,7 @@ public sealed class TextView : FrameworkElement
     {
         var view = (TextView)d;
         view.StopAnimation();
+        view._highlightedLine = null;
         view._selectionAnchor = null;
         view._firstVisibleLine = 0;
         view._lineOffset = 0;

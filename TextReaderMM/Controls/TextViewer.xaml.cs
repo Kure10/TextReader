@@ -118,7 +118,7 @@ public partial class TextViewer : UserControl
     /// <summary>Glides to the given line and puts the keyboard back into the text.</summary>
     public void ScrollToLine(long line)
     {
-        View.AnimateTo(line);
+        View.GoToLine(line);
         View.Focus();
     }
 
