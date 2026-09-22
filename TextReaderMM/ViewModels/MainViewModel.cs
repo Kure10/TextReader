@@ -190,18 +190,28 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (target is null)
             return;
 
+        if (!HasEnoughFreeSpace(target, document.FileSize))
+            return;
+
+        var source = document.FilePath;
+        using var cts = new CancellationTokenSource();
+        using var dialog = _dialogs.ShowProgress($"Saving to {Path.GetFileName(target)}", cts);
+
         IsBusy = true;
-        StatusText = "Saving...";
 
         try
         {
-            var source = document.FilePath;
+            var progress = new Progress<double>(ratio =>
+                dialog.Report(ratio, $"Saving {FormatSize((long)(document.FileSize * ratio))} of {FormatSize(document.FileSize)}"));
 
-            // The document is just a file on disk, so saving is a plain copy
-            // and never loads the content into memory.
-            await Task.Run(() => File.Copy(source, target, overwrite: true));
+            await FileCopier.CopyAsync(source, target, progress, cts.Token);
 
             StatusText = $"Saved to {target}";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Saving cancelled";
+            Log.Info($"Saving to {target} was cancelled");
         }
         catch (Exception ex)
         {
@@ -213,6 +223,27 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// The copy is as large as the source, so there is no point starting one that
+    /// cannot possibly fit.
+    /// </summary>
+    private bool HasEnoughFreeSpace(string target, long requiredBytes)
+    {
+        var free = FileCopier.GetFreeSpace(target);
+
+        if (free is null || free >= requiredBytes)
+            return true;
+
+        _dialogs.ShowError(
+            $"Not enough free space.\n\nThe file needs {FormatSize(requiredBytes)} " +
+            $"but only {FormatSize(free.Value)} is available at the chosen location.");
+
+        StatusText = "Not enough free space";
+        Log.Warning($"Saving to {target} refused: needs {requiredBytes:N0} B, {free.Value:N0} B free");
+
+        return false;
     }
 
     /// <summary>The reader opening its own documentation, which is also a nice smoke test.</summary>

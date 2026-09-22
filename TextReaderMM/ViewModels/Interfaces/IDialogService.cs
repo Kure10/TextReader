@@ -18,5 +18,8 @@ public interface IDialogService
 
     void ShowShortcuts();
 
+    /// <summary>Opens a progress window; cancelling it cancels the given token source.</summary>
+    IProgressDialog ShowProgress(string title, CancellationTokenSource cts);
+
     void ShowError(string message);
 }

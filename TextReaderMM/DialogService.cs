@@ -45,6 +45,14 @@ public sealed class DialogService(Window owner) : IDialogService
         window.ShowDialog();
     }
 
+    public IProgressDialog ShowProgress(string title, CancellationTokenSource cts)
+    {
+        var window = new ProgressWindow(title, cts) { Owner = owner };
+        window.Show();
+
+        return window;
+    }
+
     public void ShowError(string message)
         => MessageBox.Show(owner, message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 }
