@@ -257,6 +257,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        // Opening the readme replaces whatever is open, which is worth asking about.
+        if (Document is not null && !_dialogs.Confirm("Open the readme", "Replace the open document with README.md?"))
+            return;
+
         OpenDocument(path, isTemporary: false);
     }
 

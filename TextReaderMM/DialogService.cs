@@ -53,6 +53,9 @@ public sealed class DialogService(Window owner) : IDialogService
         return window;
     }
 
+    public bool Confirm(string title, string message)
+        => MessageBox.Show(owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+
     public void ShowError(string message)
         => MessageBox.Show(owner, message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 }

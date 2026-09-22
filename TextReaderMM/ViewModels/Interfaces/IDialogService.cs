@@ -18,6 +18,9 @@ public interface IDialogService
 
     void ShowShortcuts();
 
+    /// <summary>Yes/no question; true means the user confirmed.</summary>
+    bool Confirm(string title, string message);
+
     /// <summary>Opens a progress window; cancelling it cancels the given token source.</summary>
     IProgressDialog ShowProgress(string title, CancellationTokenSource cts);
 
