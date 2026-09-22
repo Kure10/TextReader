@@ -39,6 +39,9 @@ public sealed class TextView : FrameworkElement
     /// <summary>Upper bound for the gutter; wider than this it only steals space from the text.</summary>
     private const double MaxGutterWidth = 110;
 
+    /// <summary>How many characters of breathing space to keep around a match, in characters.</summary>
+    private const double MatchHorizontalMargin = 8;
+
     /// <summary>Default cap for copying; a selection can span the whole document.</summary>
     public const int DefaultMaxCopyCharacters = 5000;
 
@@ -284,7 +287,9 @@ public sealed class TextView : FrameworkElement
                 return;
 
             _horizontalOffset = clamped;
+
             InvalidateVisual();
+            ScrollChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -336,6 +341,29 @@ public sealed class TextView : FrameworkElement
             return;
 
         AnimateTo(line - viewport / 3);
+    }
+
+    /// <summary>
+    /// Brings a position into view both ways. A search match can sit far to the right on a
+    /// long line, where scrolling vertically alone would leave it outside the window.
+    /// </summary>
+    public void EnsureLineColumnVisible(long line, int column)
+    {
+        EnsureLineVisible(line);
+
+        double textWidth = Math.Max(0, ActualWidth - GutterWidth);
+
+        if (textWidth <= 0 || _charWidth <= 0)
+            return;
+
+        // Monospaced font again: the column number is the position in pixels.
+        double x = column * _charWidth;
+        double margin = _charWidth * MatchHorizontalMargin;
+
+        if (x < _horizontalOffset + margin)
+            HorizontalOffset = Math.Max(0, x - margin);
+        else if (x > _horizontalOffset + textWidth - margin)
+            HorizontalOffset = x - textWidth + margin;
     }
 
     private void OnAnimationFrame(object? sender, EventArgs e)
@@ -912,7 +940,7 @@ public sealed class TextView : FrameworkElement
     private static void OnCurrentMatchChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (e.NewValue is SearchMatch match)
-            ((TextView)d).EnsureLineVisible(match.LineIndex);
+            ((TextView)d).EnsureLineColumnVisible(match.LineIndex, match.ColumnIndex);
     }
 
     private static void OnFontChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
