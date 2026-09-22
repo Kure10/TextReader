@@ -23,9 +23,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private bool _isBusy;
     private string _statusText = "No file loaded";
 
-    public MainViewModel(IDialogService dialogs)
+    public MainViewModel(IDialogService dialogs, UserSettings? savedSettings = null)
     {
         _dialogs = dialogs;
+        Settings = new SettingsViewModel(savedSettings);
 
         OpenFileCommand = new RelayCommand(OpenFile, () => !IsBusy);
         OpenUrlCommand = new RelayCommand(OpenUrl, () => !IsBusy);
@@ -51,7 +52,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public SearchViewModel Search { get; } = new();
 
     /// <summary>Font size and other display options.</summary>
-    public SettingsViewModel Settings { get; } = new();
+    public SettingsViewModel Settings { get; }
 
     /// <summary>When on, only the lines containing the search term are shown.</summary>
     public bool IsFilterActive

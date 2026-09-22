@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using TextReaderMM.Core;
 
 namespace TextReaderMM.ViewModels;
 
@@ -14,13 +15,27 @@ public sealed class SettingsViewModel : ObservableObject
     private const double MaxFontSize = 40;
     private const double FontSizeStep = 1;
 
+    private const int MinCopyCharacters = 1000;
+    private const int MaxCopyCharactersLimit = 50_000;
+    private const double MinScrollSpeed = 4;
+    private const double MaxScrollSpeed = 30;
+
     private double _fontSize = DefaultFontSize;
     private bool _showLineNumbers = true;
     private int _maxCopyCharacters = 5000;
     private double _scrollSpeed = 14;
 
-    public SettingsViewModel()
+    public SettingsViewModel(UserSettings? saved = null)
     {
+        // Values from the file are clamped as well: the file can be edited by hand.
+        if (saved is not null)
+        {
+            FontSize = saved.FontSize;
+            ShowLineNumbers = saved.ShowLineNumbers;
+            MaxCopyCharacters = saved.MaxCopyCharacters;
+            ScrollSpeed = saved.ScrollSpeed;
+        }
+
         IncreaseFontSizeCommand = new RelayCommand(() => FontSize += FontSizeStep, () => FontSize < MaxFontSize);
         DecreaseFontSizeCommand = new RelayCommand(() => FontSize -= FontSizeStep, () => FontSize > MinFontSize);
         ResetFontSizeCommand = new RelayCommand(() => FontSize = DefaultFontSize, () => Math.Abs(FontSize - DefaultFontSize) > 0.01);
@@ -58,13 +73,16 @@ public sealed class SettingsViewModel : ObservableObject
     public double ScrollSpeed
     {
         get => _scrollSpeed;
-        set => SetField(ref _scrollSpeed, value);
+        set => SetField(ref _scrollSpeed, Math.Clamp(value, MinScrollSpeed, MaxScrollSpeed));
     }
 
     /// <summary>How much text a single copy may put on the clipboard.</summary>
     public int MaxCopyCharacters
     {
         get => _maxCopyCharacters;
-        set => SetField(ref _maxCopyCharacters, value);
+        set => SetField(ref _maxCopyCharacters, Math.Clamp(value, MinCopyCharacters, MaxCopyCharactersLimit));
     }
+
+    /// <summary>Current state in the shape that gets written to disk.</summary>
+    public UserSettings ToUserSettings() => new(FontSize, ShowLineNumbers, MaxCopyCharacters, ScrollSpeed);
 }
